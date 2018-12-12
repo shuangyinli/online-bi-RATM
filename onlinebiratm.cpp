@@ -1,5 +1,5 @@
 //============================================================================
-// Name        : ONLINEbi-ratm.cpp
+// Name        : ONLINEratm.cpp
 //============================================================================
 
 #include "stdio.h"
@@ -11,7 +11,7 @@
 
 #include "onlineinference.h"
 #include "onlinelearn.h"
-#include "onlineratm.h"
+#include "onlinebiratm.h"
 #include "cstdlib"
 #include "algorithm"
 using namespace std;
@@ -32,6 +32,7 @@ senDocument ** readbatchData(char* filename, int num_topics, int& num_docs, int&
 	char c;
 	while((c=getc(fp))!=EOF) {
 	        if (c=='\n') num_docs++;
+
 	    }
 	   fclose(fp);
 	   fp = fopen(filename,"r");
@@ -63,6 +64,7 @@ senDocument ** readbatchData(char* filename, int num_topics, int& num_docs, int&
 	        batch_corpus[num_docs++]  = new senDocument(doc_num_all_words, num_topics, win, doc_num_sentences, sentences);
 	        batch_num_all_words +=doc_num_all_words;
 	    }
+
 	    fclose(fp);
 
 	    //printf("num_docs: %d\nnum_words:%d\n",num_docs,num_words);
@@ -207,7 +209,6 @@ void Configuration::read_settingfile(char* settingfile){
 	            continue;
 	        }
 
-
 	       	if (strcmp(key, "total_num_words") == 0) {
 	            fscanf(fp, "%d", &total_num_words);
 	            continue;
@@ -219,9 +220,6 @@ void Configuration::read_settingfile(char* settingfile){
 
 	        if (strcmp(test_action, "no")==0) test = 0;
 	        else test =1;
-
-
-
 	    }
 
 }
@@ -288,7 +286,7 @@ void senDocument::init() {
 		 rou[i] = util::random();
 	 }
 
-	 for(int i=0; i<docwin+num_sentences; i++){
+	 for(int i=0; i<(2*docwin)+num_sentences; i++){
 		    total = 0;
 	    	for(int j=0; j<num_topics; j++){
 	    		double temrandom = rand()/(RAND_MAX+1.0);
@@ -384,7 +382,7 @@ void print_onlinemodel_info(char* model_root, onlineModel* model) {
     fprintf(fp, "onlinenum_topics: %d\n", model->onlinenum_topics);
 
     fprintf(fp, "onlinenum_docs: %d\n", model->onlinenum_docs);
-    fprintf(fp, "onlinewin: %d\n", model->onlinewin);
+    fprintf(fp, "onlinewin_f: %d\n", model->onlinewin_f);
     fclose(fp);
 }
 /*
@@ -498,7 +496,6 @@ double compute_sen_likelihood(senDocument* doc, Sentence* sentence, Model* model
 
 Sentence ** convert_to_lda_corpus(senDocument ** batch_corpus, Model* model, int num_docs){
 	int num_topics = model->num_topics;
-
 	int win_f = model->win_f;
 
 	Sentence ** lda_corpus = new Sentence * [ num_docs];
@@ -641,7 +638,7 @@ void initDocTopics2(senDocument** corpus, Model* model){
     		doc->rou[k] = lda_topic[k]/sum_topic;
     	}
 
-    	int winsentenceno = doc->docwin + doc->num_sentences;
+    	int winsentenceno = (2*doc->docwin) + doc->num_sentences;
 		for(int s=0; s<winsentenceno; s++)
 			for(int k=0; k<num_topics; k++)
 				doc->docTopicMatrix[s*num_topics + k] = doc->doctopic[k];
@@ -672,7 +669,7 @@ void initDocTopics(senDocument** corpus, Model* model){
 					corpus[i]->doctopic[j] = log(docgamma[j] / tem);
 					corpus[i]->rou[j] = docgamma[j] / tem;
 				}
-		int winsentenceno = corpus[i]->docwin+corpus[i]->num_sentences;
+		int winsentenceno = (2*corpus[i]->docwin)+corpus[i]->num_sentences;
 		for(int s=0; s<winsentenceno; s++)
 			for(int j=0; j<num_topics; j++)
 				corpus[i]->docTopicMatrix[s*num_topics + j] = corpus[i]->doctopic[j];
@@ -690,16 +687,20 @@ void initDocTopics(senDocument** corpus, Model* model){
 			for(int k = 0; k<num_topics; k++){
 				corpus[d]->sentences[s]->topic[k] = topic[k];
 			}
-			for(int w =0; w< model->win; w++){
-				for(int k = 0; k<num_topics; k++){
-					//init all the fore topic distributions for each sentence. by document topics
+
+			for(int w =0; w< model->win-1; w++)
+				for(int k = 0; k<num_topics; k++)
 					corpus[d]->sentences[s]->wintopics[w*num_topics +k] = topic[k];
-				}
-			}
+
+			for(int w = model->win+1; w< 2*model->win; w++)
+				for(int k = 0; k<num_topics; k++)
+					corpus[d]->sentences[s]->wintopics[w*num_topics +k] = topic[k];
+			for(int k = 0; k<num_topics; k++)
+					corpus[d]->sentences[s]->wintopics[(2*model->win)*num_topics +k] = topic[k];
+
+
 		}
 	}
-	
-
 }
 
 void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, char* beta_file = NULL){
@@ -714,13 +715,11 @@ void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, cha
   	total_num_words = config.total_num_words;
 
     int win = config.win;
-
-
+    int win_f = 2*win +1;
     int num_topics = config.num_topics;
 	printf("The window size is %d, and the number of topics is %d. \n", win, num_topics);
 
-
-	onlineModel* onlinemodel = new onlineModel(total_num_docs, total_num_words, num_topics, win);
+	onlineModel* onlinemodel = new onlineModel(total_num_docs, total_num_words, num_topics, win_f);
 	if(beta_file){
 		printf("init the beta \n");
     	readinitBeta(onlinemodel, beta_file);
@@ -755,23 +754,23 @@ void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, cha
 		printf("the input batch %d is over \n\n",b);
 
 	}
-
-
 }
 
 void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineModel* onlinemodel,
 	double rho_b) {
 	setbuf(stdout, NULL);
 	int win = config.win;
-
+	int win_f = 2*win +1;
 	int num_topics = config.num_topics;
 
 	int total_num_words = config.total_num_words;
     int batch_num_docs;
     int batch_num_words;
 
+
     srand(unsigned(time(0)));
     senDocument** corpus = readbatchData(inputfile,num_topics,batch_num_docs, batch_num_words, win);
+    puts("dddd");
 	puts("Read batch Data Finish.");
 	printf("This batch contains %d documents and %d words.\n", batch_num_docs, batch_num_words);
 	puts("Now begin to train the batch...");
@@ -785,7 +784,7 @@ void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineM
 
   	printf("init the topics...\n");
     initDocTopics(corpus, model);
-    
+
     time_t learn_begin_time = time(0);
     int num_round = 0;
 
@@ -837,9 +836,16 @@ void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineM
 	int num_words = onlinemodel->onlinenum_words;
 	for (int k = 0; k < num_topics; k++) {
 				for (int i = 0; i < num_words; i++) {
+
+					if(isnan(onlinemodel->onlinelog_beta[k * num_words + i]) || isinf(onlinemodel->onlinelog_beta[k * num_words + i])) onlinemodel->onlinelog_beta[k * num_words + i] = 1.0 / num_words;
+
+
 					onlinemodel->onlinelog_beta[k * num_words + i] =  log(
 							(1 - rho_b)* exp(onlinemodel->onlinelog_beta[k * num_words+ i])
 									+ rho_b * 1024 * exp(model->log_beta[k * num_words + i]) / batch_num_docs);
+
+					if(isnan(onlinemodel->onlinelog_beta[k * num_words + i]) || isinf(onlinemodel->onlinelog_beta[k * num_words + i])) onlinemodel->onlinelog_beta[k * num_words + i] = 1.0 / num_words;
+
 				
 				}
 	}
@@ -847,9 +853,9 @@ void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineM
 
 	puts("Then, update the pi.");
 
-	for(int t =0; t<win; t++){
+	for(int t =0; t<win_f; t++){
 		onlinemodel->onlinepi[t] = (1-rho_b) * onlinemodel->onlinepi[t] + rho_b * model->pi[t];
-	if(isnan(model->pi[t]) || isinf(model->pi[t])){
+			if(isnan(model->pi[t]) || isinf(model->pi[t])){
 						printf("here1 \n");
 						exit(0);
 					}
@@ -869,7 +875,6 @@ void init_model_by_onlinemodel(Model * model, onlineModel * onlinemodel){
 	int num_topics = model->num_topics;
 	int onlinenum_words = onlinemodel->onlinenum_words;
 	int num_words_b = model->num_words;
-
 	int win_f = model->win_f;
 
 	if (onlinenum_words != num_words_b) {
@@ -896,14 +901,14 @@ void infer_ratm(char* settingfile, char* test_file, char* model_root, char* pref
 
     Model* model = new Model(model_root, prefix);
     int num_topics = model->num_topics;
-    int win = model->win;
-   
+
+    int win_f = model->win_f;
 
     int num_test_docs;
     int num_test_all_words;
     srand(unsigned(time(0)));
 
-    senDocument** corpus = readbatchData(test_file,num_topics,num_test_docs, num_test_all_words, win);
+    senDocument** corpus = readbatchData(test_file,num_topics,num_test_docs, num_test_all_words, win_f);
     model->num_all_words_in_test = num_test_all_words;
     model->test_num_docs = num_test_docs;
     model->train_num_docs = 0;
@@ -1026,6 +1031,8 @@ int main(int argc, char* argv[]) {
 		printf("\n");
 		printf("*************Trainning***********************\n");
 
+		printf("Pleae set G0 = [0 1] in setting.txt \n 0: ignore the G0 \n 1: use the topic distribution of doc as the G0\n");
+		printf("\n");
 		printf(
 				"./onlineratm est <onlinesetting.txt> <input data directory> <model save dir>\n\n");
 		printf(

@@ -26,27 +26,24 @@ void doInference(senDocument* doc, Model* model, Configuration* configuration) {
     		double sen_lik;
     		Sentence* sentence = doc->sentences[s];
 
-
     		for(int i = 0; i < win-1; i++)
-				for (int k = 0; k < num_topics; k++)
-					sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
+    						for (int k = 0; k < num_topics; k++)
+    							sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
 
-			for(int i = win+1; i < 2*win; i++)
-				for (int k = 0; k < num_topics; k++)
-					sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
+    					for(int i = win+1; i < 2*win; i++)
+    						for (int k = 0; k < num_topics; k++)
+    							sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
 
-			for (int k = 0; k < num_topics; k++) {
-				sentence->wintopics[(2*win) * num_topics + k] =doc->doctopic[k];
-			}
-
-
+    					for (int k = 0; k < num_topics; k++) {
+    						sentence->wintopics[(2*win) * num_topics + k] =doc->doctopic[k];
+    					}
 
 			double * old_sen_loggamma = new double[sentence->num_words * num_topics];
     		double * old_sen_topics = new double[num_topics];
-    		double * old_sen_xi = new double[win_f];
+    		double * old_sen_xi = new double[win];
     		memcpy(old_sen_loggamma,sentence->log_gamma,sizeof(double)*sentence->num_words*num_topics);
     		memcpy(old_sen_topics,sentence->topic,sizeof(double)*num_topics);
-    		memcpy(old_sen_xi,sentence->xi,sizeof(double)*win_f);
+    		memcpy(old_sen_xi,sentence->xi,sizeof(double)*win);
 
     		while ((sen_converged > configuration->sen_var_converence) && ((var_iter < configuration->sen_max_var_iter || configuration->sen_max_var_iter == -1))) {
     		        var_iter ++;
@@ -58,14 +55,14 @@ void doInference(senDocument* doc, Model* model, Configuration* configuration) {
     		        if(sen_converged <0){
     		        	memcpy(sentence->log_gamma, old_sen_loggamma,sizeof(double)*sentence->num_words*num_topics);
     					memcpy(sentence->topic, old_sen_topics,sizeof(double)*num_topics);
-    					memcpy(sentence->xi, old_sen_xi,sizeof(double)*win);
+    					memcpy(sentence->xi, old_sen_xi,sizeof(double)*win_f);
     					sentence->senlik = sen_lik;
     					break;
     		        }
 
 					memcpy(old_sen_loggamma,sentence->log_gamma,sizeof(double)*sentence->num_words*num_topics);
     				memcpy(old_sen_topics,sentence->topic,sizeof(double)*num_topics);
-    				memcpy(old_sen_xi,sentence->xi,sizeof(double)*win);
+    				memcpy(old_sen_xi,sentence->xi,sizeof(double)*win_f);
 
     		        sen_lik_old = sen_lik;
     		    }
@@ -92,7 +89,6 @@ void doInference(senDocument* doc, Model* model, Configuration* configuration) {
 
 void inferenceRou(senDocument* document, Model* model) {
 		int num_sentence = document->num_sentences;
-	    int win = model->win;
 	    int win_f = model->win_f;
 	    int num_topics = model->num_topics;
 	    double * doc_rou = document->rou;
@@ -111,7 +107,7 @@ void inferenceRou(senDocument* document, Model* model) {
 	    			for (int j = 0; j < sen_num_words; j++) {
 	    				sigma_gamma += exp(log_gamma[j * num_topics + k]);
 	    			}
-	    			doc_rou[k] += sigma_gamma * (sentence->xi[2*win] / sigma_xi);
+	    			doc_rou[k] += sigma_gamma * (sentence->xi[win_f - 1] / sigma_xi);
 	    			if (isnan(doc_rou[k]) || isinf(doc_rou[k])) {
 	    				printf("rou is nan ");
                         exit(0);
@@ -140,7 +136,8 @@ void inferenceGamma(Sentence* sentence, Model* model) {
 	    double* log_gamma = sentence->log_gamma;
 	    double* theta_xi = new double[num_topics];
 	    double sigma_xi = 0;
-	    int win_f = sentence->win_f;
+	    int win_f = model->win_f;
+
 	    for (int i = 0; i < win_f; i++){
 	        sigma_xi += sentence->xi[i];
 	    }
@@ -166,6 +163,7 @@ void inferenceGamma(Sentence* sentence, Model* model) {
 }
 
 void inferenceXi(Sentence* sentence, Model* model,Configuration* configuration) {
+
     int win_f = model->win_f;
     double* descent_xi = new double[win_f];
     initXi(sentence->xi,win_f);
@@ -280,7 +278,7 @@ void getDescentXi(Sentence* sentence, Model* model,double* descent_xi) {
 
 double getXiFunction(Sentence* sentence, Model* model) {
 		double xi_function_value = 0.0;
-	    int win_f = sentence->win_f;
+		int win_f = sentence->win_f;
 	    double sigma_xi = 0.0;
 	    double* pi = model->pi;
 	    double* log_theta = sentence->wintopics;
@@ -314,14 +312,15 @@ double getXiFunction(Sentence* sentence, Model* model) {
 	    delete[] sum_log_theta;
 	    return xi_function_value;
 }
-inline void initXi(double* xi,int win) {
-    for (int i = 0; i < win; i++) xi[i] = util::random();//init 100?!
+inline void initXi(double* xi,int win_f) {
+    for (int i = 0; i < win_f; i++) xi[i] = util::random();//init 100?!
 }
 
 double verifyTestSet(senDocument** test_corpus, Model* model, Configuration* configuration, int test_num_docs) {
-    int win = model->win;
+	int win = model->win;
+
     int num_topics = model->num_topics;
-    //int win_f = model->win_f;
+
     int num_words = model->num_words;
     bool* reset_beta_flag = new bool[num_topics * model->num_words];
     memset(reset_beta_flag, 0, sizeof(bool) * num_topics * model->num_words);
@@ -329,11 +328,17 @@ double verifyTestSet(senDocument** test_corpus, Model* model, Configuration* con
         senDocument* doc = test_corpus[d];
         for(int s =0; s<doc->num_sentences; s++){
             Sentence* sentence = doc->sentences[s];
+            for(int i = 0; i < win-1; i++)
+            				for (int k = 0; k < num_topics; k++)
+            					sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
 
-                for (int i = 0; i < 2*win; i++)
-                    for (int k = 0; k < num_topics; k++) sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
-                for (int k = 0; k < num_topics; k++) sentence->wintopics[(2*win) * num_topics + k] =doc->doctopic[k];
+            			for(int i = win+1; i < 2*win; i++)
+            				for (int k = 0; k < num_topics; k++)
+            					sentence->wintopics[i * num_topics + k] = doc->docTopicMatrix[(i + s + 1) * num_topics + k];
 
+            			for (int k = 0; k < num_topics; k++) {
+            				sentence->wintopics[(2*win) * num_topics + k] =doc->doctopic[k];
+            			}
             inferenceXi(sentence,model, configuration);
             inferenceGamma(sentence, model);
             sentence->senlik = inference_sen_likelihood(sentence,model);

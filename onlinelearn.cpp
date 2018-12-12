@@ -4,8 +4,8 @@
 
 #include "onlinelearn.h"
 
-void initPi(double* pi, int win) {
-    for (int i = 0; i < win; i++) {
+void initPi(double* pi, int win_f) {
+    for (int i = 0; i < win_f; i++) {
         pi[i] = util::random() * 2;
     }
 }
@@ -20,15 +20,14 @@ double getPiFunction(senDocument** corpus, Model* model, int num_docs) {
     		Sentence* sentence = doc->sentences[s];
     		double sigma_pi = 0.0;
     		double sigma_xi = 0.0;
-
-    		int win_f = sentence->win_f;
-    		for (int i = 0; i < win_f; i++) {
+    		int win = sentence->win;
+    		for (int i = 0; i < win; i++) {
     		            sigma_pi += pi[i];
     		            sigma_xi += sentence->xi[i];
     		}
 
     		pi_function_value += util::log_gamma(sigma_pi);
-    		for (int i = 0; i < win_f; i++) {
+    		for (int i = 0; i < win; i++) {
     		            pi_function_value -= util::log_gamma(pi[i]);
     		            pi_function_value += (pi[i] - 1) * (util::digamma(sentence->xi[i]) - util::digamma(sigma_xi));
     		}
@@ -38,9 +37,8 @@ double getPiFunction(senDocument** corpus, Model* model, int num_docs) {
 }
 
 void getDescentPi(senDocument** corpus, Model* model, double* descent_pi, int num_docs) {
-    int win = model->win;
     int win_f = model->win_f;
-    memset(descent_pi,0,sizeof(double)* win);
+    memset(descent_pi,0,sizeof(double)* win_f);
     double* pi = model->pi;
     for (int d = 0; d < num_docs; d++) {
     	 senDocument* doc = corpus[d];
@@ -67,7 +65,7 @@ void learnPi(senDocument** corpus, Model* model, Configuration* configuration, i
     int num_round = 0;
 
     int win_f = model->win_f;
-    double* last_pi = new double [win_f];
+    double* last_pi = new double [model->win];
     double* descent_pi = new double[win_f];
     double z;
     int num_wait_for_z = 0;

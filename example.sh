@@ -16,6 +16,6 @@ rm -f ./output/*
 
 echo
 
-time ./onlineratm est onlinesetting.txt ./input/split/ ./output/ ./input/init.beta
+time ./onlinebiratm est onlinesetting.txt ./input/split/ ./output/ ./input/init.beta
 
 echo

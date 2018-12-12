@@ -8,7 +8,7 @@
 #ifndef ONLINELEARN_H_
 #define ONLINELEARN_H_
 
-#include "onlineratm.h"
+#include "onlinebiratm.h"
 #include "onlineutils.h"
 
 void normalize_log_matrix_rows(double* log_mat, int rows, int cols) ;

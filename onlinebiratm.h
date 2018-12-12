@@ -1,7 +1,7 @@
 /* */
 
-#ifndef ONLINEBIRATM_H_
-#define ONLINEBIRATM_H_
+#ifndef ONLINERATM_H_
+#define ONLINERATM_H_
 
 #include "stdio.h"
 #include "onlineutils.h"
@@ -27,12 +27,12 @@ struct Sentence{
 		num_words = num_words_;
 		num_topics = num_topics_;
 		win = win_;
-		win_f = 2 * win_ + 1;
+		win_f = 2*win_ +1;
 		xi = new double[win_f];
 		log_gamma= new double[num_words * num_topics];
 		topic = new double[num_topics];
 		senlik = 100;
-		wintopics = new double[win * num_topics];
+		wintopics = new double[win_f * num_topics];
 		init();
 	}
 	void init();
@@ -53,7 +53,7 @@ struct senDocument{
 	int num_topics;
 	double doclik;
 	int docwin;
-	int win_f;
+	int docwin_f;
 	int num_sentences;
 	struct Sentence ** sentences;
 	double* rou;
@@ -62,11 +62,11 @@ struct senDocument{
 		num_total_words = num_total_words_;
 		doclik = 100;
 		docwin = docwin_;
-		win_f = 2*docwin_ +1;
+		docwin_f = 2 * docwin_ +1;
 		num_sentences = num_sentences_;
 		rou = new double[num_topics];
 		doctopic = new double[num_topics];
-		docTopicMatrix = new double[(docwin+num_sentences)*num_topics];
+		docTopicMatrix = new double[((2*docwin)+num_sentences)*num_topics];
 		sentences = new Sentence* [num_sentences];
 		init();
 	}
@@ -75,11 +75,11 @@ struct senDocument{
 			num_total_words = num_total_words_;
 			doclik = 100;
 			docwin = docwin_;
-			win_f = 2*docwin_ +1;
+			docwin_f = 2 * docwin_ +1;
 			num_sentences = num_sentences_;
 			doctopic = new double[num_topics];
 			rou = new double[num_topics];
-			docTopicMatrix = new double[(docwin+num_sentences)*num_topics];
+			docTopicMatrix = new double[((2*docwin)+num_sentences)*num_topics];
 			sentences = sentence_;
 			init();
 		}
@@ -96,7 +96,6 @@ struct Model {
 	int num_topics;
 	int win;
 	int win_f;
-
 	int num_docs;
     int test_num_docs;
     int train_num_docs;
@@ -156,16 +155,14 @@ struct onlineModel {
 	int onlinenum_docs;
 	int onlinenum_words;
 	int onlinenum_topics;
-	int onlinewin;
+	//int onlinewin;
 	int onlinewin_f;
 	double* onlinepi;
 	double* onlinelog_beta;
-	int onlineG0;
 	onlineModel(int onlinenum_docs_, int onlinenum_words_, int onlinenum_topics_, int onlinewin_, onlineModel* init_model = NULL){
 		onlinenum_docs = onlinenum_docs_;
 		onlinenum_words = onlinenum_words_;
-		onlinewin = onlinewin_;
-		onlinewin_f = 2* onlinewin_ + 1;
+		onlinewin_f = onlinewin_;
 		onlinenum_topics = onlinenum_topics_;
 
 		onlinepi = new double[onlinewin_f];
