@@ -703,7 +703,7 @@ void initDocTopics(senDocument** corpus, Model* model){
 	}
 }
 
-void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, char* beta_file = NULL){
+void begin_online_biratm(char* settingfile, char* inputpath, char* model_root, char* beta_file = NULL){
 	setbuf(stdout, NULL);
     Configuration config = Configuration(settingfile);
     if(config.total_num_words == 0){
@@ -747,7 +747,7 @@ void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, cha
 		double rho_b = pow(tau_0+updatect, -kppa);
 		strcpy(inputfile, inputpath);
 		strcat(inputfile, batchdatafile);
-		begin_ratm(config, inputfile, model_root, onlinemodel, rho_b);
+		begin_biratm(config, inputfile, model_root, onlinemodel, rho_b);
 		//print_onlineCTLmodel(model_root, onlinemodel,batchdatafile);
 
 		updatect ++;	
@@ -756,7 +756,7 @@ void begin_online_ratm(char* settingfile, char* inputpath, char* model_root, cha
 	}
 }
 
-void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineModel* onlinemodel,
+void begin_biratm(Configuration config, char* inputfile, char* model_root, onlineModel* onlinemodel,
 	double rho_b) {
 	setbuf(stdout, NULL);
 	int win = config.win;
@@ -1021,24 +1021,21 @@ int main(int argc, char* argv[]) {
 
 	if (argc > 1 && argc == 5 && strcmp(argv[1],"est") == 0) {
 		printf("Now begin training...\n");
-		begin_online_ratm(argv[2],argv[3], argv[4], NULL);
+		begin_online_biratm(argv[2],argv[3], argv[4], NULL);
 	}else if(argc > 1 && argc == 6 && strcmp(argv[1],"est") == 0){
 		printf("Now begin training with initial parameters...\n");
-		begin_online_ratm(argv[2],argv[3], argv[4], argv[5]);
+		begin_online_biratm(argv[2],argv[3], argv[4], argv[5]);
 	}
 	else {
 		printf("Please use the following setting.\n");
 		printf("\n");
 		printf("*************Trainning***********************\n");
-
-		printf("Pleae set G0 = [0 1] in setting.txt \n 0: ignore the G0 \n 1: use the topic distribution of doc as the G0\n");
-		printf("\n");
 		printf(
-				"./onlineratm est <onlinesetting.txt> <input data directory> <model save dir>\n\n");
+				"./onlinebiratm est <onlinesetting.txt> <input data directory> <model save dir>\n\n");
 		printf(
 				"If you want to initialize the model with default parameters, please use: \n");
 		printf(
-				"./onlineratm est <onlinesetting.txt> <input data directory> <model save dir> <topic_dis_overwords_beta file >\n\n");
+				"./onlinebiratm est <onlinesetting.txt> <input data directory> <model save dir> <topic_dis_overwords_beta file >\n\n");
 		
 		printf("\n");
 	}

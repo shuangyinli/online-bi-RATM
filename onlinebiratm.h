@@ -239,6 +239,6 @@ void printParameters(senDocument** corpus, int num_round, char* model_root, Mode
 void saveDocumentsTopicsSentencesAttentions(senDocument** corpus, Model * model, char* output_dir);
 void print_mat(double* mat, int row, int col, char* filename);
 double corpuslikelihood(senDocument** corpus, Model* model, int num_docs);
-void begin_ratm(Configuration config, char* inputfile, char* model_root, onlineModel* onlinemodel, double rho_b);
+void begin_biratm(Configuration config, char* inputfile, char* model_root, onlineModel* onlinemodel, double rho_b);
 void init_model_by_onlinemodel(Model * model, onlineModel * onlinemodel);
 #endif
